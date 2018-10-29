@@ -268,8 +268,7 @@ class Layer {
   virtual inline bool AllowForceBackward(const int bottom_index) const {
     return true;
   }
-
-  /** Compute blob mask ----Solomon*/
+  /** Compute blob mask ----Solomon*/ 
    virtual void ComputeBlobMask() {}
 
   /**
@@ -306,10 +305,10 @@ class Layer {
   /** vector<int> masks_: deep compression for weight which should be mask ----Solomon  */
   Blob<int> masks_;
 
- /** vector<int> indices ----Solomon*/
+  /** vector<int> indices ----Solomon*/
   Blob<int> indices_;
 
- /** vector<int> centroids_ ----Solomon*/
+  /** vector<int> centroids_ ----Solomon*/
   Blob<Dtype> centroids_;
 
   /** Vector indicating whether to compute the diff of each param blob. */

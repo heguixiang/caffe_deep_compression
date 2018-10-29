@@ -81,11 +81,8 @@ class BaseConvolutionLayer : public Layer<Dtype> {
   /// @brief The spatial dimensions of the output.
   vector<int> output_shape_;
   const vector<int>* bottom_shape_;
-  
-  //temp variable for weight quantization ----Solomon
-  //Blob<Dtype> tmpDiff_;
-  //Blob<int> freq_;
-  //sparse parameters ----Solomon
+
+//sparse parameters ----Solomon
   float sparse_ratio_;
   int class_num_;
   bool quantize_term_;
@@ -104,7 +101,6 @@ class BaseConvolutionLayer : public Layer<Dtype> {
   bool bias_term_;
   bool is_1x1_;
   bool force_nd_im2col_;
-
 
  private:
   // wrap im2col/col2im so we don't have to remember the (long) argument lists

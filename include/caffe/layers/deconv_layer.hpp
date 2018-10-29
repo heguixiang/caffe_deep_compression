@@ -44,7 +44,8 @@ class DeconvolutionLayer : public BaseConvolutionLayer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
   virtual inline bool reverse_dimensions() { return true; }
   virtual void compute_output_shape();
-  virtual inline bool compress_weights() { return false; }
+  virtual inline bool compress_weights() {return false; }
+
 };
 
 }  // namespace caffe

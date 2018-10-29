@@ -19,7 +19,6 @@ void BaseConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const int num_axes = bottom[0]->num_axes();
   num_spatial_axes_ = num_axes - first_spatial_axis;
   CHECK_GE(num_spatial_axes_, 0);
-  vector<int> bottom_dim_blob_shape(1, num_spatial_axes_ + 1);
   vector<int> spatial_dim_blob_shape(1, std::max(num_spatial_axes_, 1));
   // Setup filter kernel dimensions (kernel_shape_).
   kernel_shape_.Reshape(spatial_dim_blob_shape);
@@ -180,28 +179,22 @@ void BaseConvolutionLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   weight_offset_ = conv_out_channels_ * kernel_dim_ / group_;
   // Propagate gradients to the parameters (as directed by backward pass).
   this->param_propagate_down_.resize(this->blobs_.size(), true);
-
-  // initialization compress weight data part ----Solomon 
-  if(compress_weights()) 
+ 
+  // initialization compress weight data part ----Solomon
+  if(compress_weights())
   {// sparisty
     sparse_ratio_ = this->layer_param_.convolution_param().sparse_ratio();
     class_num_ = this->layer_param_.convolution_param().class_num();
     quantize_term_ = this->layer_param_.convolution_param().quantize_term();
-    int count = this->blobs_[0]->count() ; 
+    int count = this->blobs_[0]->count();
     vector<int> mask_shape(1, count);
     this->masks_.Reshape(mask_shape);
-    //int* mask_data = this->masks_.mutable_cpu_data();
-    //this->masks_.resize(count);
-    //for(int i = 0; i< count; ++i)
-    //	mask_data[i] = 1;
     caffe_set(count ,1, this->masks_.mutable_cpu_data());
     if(quantize_term_)
     {
-      vector<int> cen_shape(1, class_num_);
-      this->indices_.Reshape(mask_shape);
-      this->centroids_.Reshape(cen_shape);
-     // this->tmpDiff_.Reshape(cen_shape);
-     // this->freq_.Reshape(cen_shape);
+     vector<int> cen_shape(1, class_num_);
+     this->indices_.Reshape(mask_shape);
+     this->centroids_.Reshape(cen_shape);
     }
   }
 }

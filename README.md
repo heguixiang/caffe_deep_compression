@@ -1,45 +1,55 @@
-# Caffe
+# DeepCompression-caffe
+Caffe for Deep Compression
 
-[![Build Status](https://travis-ci.org/BVLC/caffe.svg?branch=master)](https://travis-ci.org/BVLC/caffe)
-[![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
+# Introduction
+This is a simple caffe implementation of Deep Compression(https://arxiv.org/abs/1510.00149), including weight prunning and quantization.<br>
+According to the paper, the compression are implemented only on convolution and fully-connected layers.<br>
+Thus we add a CmpConvolution and a CmpInnerProduct layer.<br>
+The params that controlls the sparsity including:<br>
+* sparse_ratio: the ratio of pruned weights<br>
+* class_num: the numbers of k-means for weight quantization<br>
+* quantization_term: whether to set quantization on <br>
 
-Caffe is a deep learning framework made with expression, speed, and modularity in mind.
-It is developed by Berkeley AI Research ([BAIR](http://bair.berkeley.edu))/The Berkeley Vision and Learning Center (BVLC) and community contributors.
+For a better understanding, please see the examples/mnist and run the demo script, which automatically compresses a pretrained MNIST LeNet caffemodel.
 
-Check out the [project site](http://caffe.berkeleyvision.org) for all the details like
+# Run LeNet Compression Demo
 
-- [DIY Deep Learning for Vision with Caffe](https://docs.google.com/presentation/d/1UeKXVgRvvxg9OUdh_UiC5G71UMscNPlvArsWER41PsU/edit#slide=id.p)
-- [Tutorial Documentation](http://caffe.berkeleyvision.org/tutorial/)
-- [BAIR reference models](http://caffe.berkeleyvision.org/model_zoo.html) and the [community model zoo](https://github.com/BVLC/caffe/wiki/Model-Zoo)
-- [Installation instructions](http://caffe.berkeleyvision.org/installation.html)
+```
+$Bash
+```
 
-and step-by-step examples.
+```Bash
+# clone repository and make 
+$ git clone https://github.com/may0324/DeepCompression-caffe.git
+$ cd DeepCompression-caffe
+$ make -j 32 
 
-## Custom distributions
+# run demo script, this will finetune a pretrained model
+$ python examples/mnist/train_compress_lenet.py
 
- - [Intel Caffe](https://github.com/BVLC/caffe/tree/intel) (Optimized for CPU and support for multi-node), in particular Xeon processors (HSW, BDW, SKX, Xeon Phi).
-- [OpenCL Caffe](https://github.com/BVLC/caffe/tree/opencl) e.g. for AMD or Intel devices.
-- [Windows Caffe](https://github.com/BVLC/caffe/tree/windows)
+```
 
-## Community
+# Details 
+the sparse parameters of lenet are set based on the paper as follows:<br>
 
-[![Join the chat at https://gitter.im/BVLC/caffe](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/BVLC/caffe?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+|    layer name   |      sparse ratio     |           quantization num              |
+| :------------- |:-------------:| :-----:|
+| conv1           |               0.33               |                256               |
+| conv2           |               0.8                |                256               |
+| fc1             |               0.9                |                32                |
+| fc2             |               0.8                |                32                |    
 
-Please join the [caffe-users group](https://groups.google.com/forum/#!forum/caffe-users) or [gitter chat](https://gitter.im/BVLC/caffe) to ask questions and talk about methods and models.
-Framework development discussions and thorough bug reports are collected on [Issues](https://github.com/BVLC/caffe/issues).
+In practice, the layers are much more sensitive to weight prunning than weight quantization. <br>
+So we suggest to do weight prunning layer-wisely 
+and do weight quantization finally since it almost does no harm to accuary. <br>
+In the script demo, we set the sparse ratio (the ratio of pruned weights) layer-wisely and do each finetuning iteration.
+After all layers are properly pruned, weight quantization are done on all layers simultaneously. <br>
 
-Happy brewing!
+The final accuracy of finetuned model is about 99.06%, you can check if the weights are most pruned and weight-shared for sure.<br>
 
-## License and Citation
+# Model Size
+The size of finetuned model is still the same as the original one since it is stored in 'caffemodel' format. Although most of the weights are pruned and shared, the weights are still stored in float32. You can only store the non-zero weight and cluster center to reduce the redundacy of finetuned model, please refer to the paper.
 
-Caffe is released under the [BSD 2-Clause license](https://github.com/BVLC/caffe/blob/master/LICENSE).
-The BAIR/BVLC reference models are released for unrestricted use.
+Please refer to http://blog.csdn.net/may0324/article/details/52935869 for more. <br>
+Enjoy! 
 
-Please cite Caffe in your publications if it helps your research:
-
-    @article{jia2014caffe,
-      Author = {Jia, Yangqing and Shelhamer, Evan and Donahue, Jeff and Karayev, Sergey and Long, Jonathan and Girshick, Ross and Guadarrama, Sergio and Darrell, Trevor},
-      Journal = {arXiv preprint arXiv:1408.5093},
-      Title = {Caffe: Convolutional Architecture for Fast Feature Embedding},
-      Year = {2014}
-    }

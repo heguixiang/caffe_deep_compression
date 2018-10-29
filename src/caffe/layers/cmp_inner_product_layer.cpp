@@ -1,3 +1,9 @@
+/**
+*
+* InnerProduct_layer.cpp deep compression implementation code
+* author: Solomon He, Solomonhe@zhaoxin.com
+*
+**/
 #include <vector>
 #include <iostream>
 using namespace std ;
@@ -6,48 +12,103 @@ using namespace std ;
 #include "caffe/layers/cmp_inner_product_layer.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/kmeans.hpp"
+#define KERNEL_LEVEL_SPARSITY 0
 
 namespace caffe {
 
 template <typename Dtype>
 void CmpInnerProductLayer<Dtype>::ComputeBlobMask()
 {
-  //  LOG(INFO) << "inner blobmask"<<endl;
   int count = this->blobs()[0]->count();
-  //this->masks_.resize(count);
-
-  //this->indices_.resize(count);
-  //this->centroids_.resize(this->class_num_);
+  int num    = this->blobs_[0]->num();
+  int channels = this->blobs_[0]->channels();
+  int height = this->blobs_[0]->height();                                                 
+  int width  = this->blobs_[0]->width();                                                   
 
   //calculate min max value of weight
   const Dtype* weight = this->blobs_[0]->cpu_data();
   int *mask_data = this->masks_.mutable_cpu_data();
-  //Dtype min_weight = weight[0], max_weight = weight[0];
+
   vector<Dtype> sort_weight(count);
 
   for (int i = 0; i < count; ++i)
   {
-   //this->masks_[i] = 1; //initialize
      sort_weight[i] = fabs(weight[i]);
   }
+#if  0 //KERNEL_LEVEL_SPARSITY
+  int kernel_num = num * channels;
+  vector<Dtype> kernel_level_sort_weight(kernel_num); //each vector element store each kernel maximum value
+
+  //1. find each kernal max element then store to the kernel_level_sort_weight vector
+  for(int kernelIdx = 0; kernelIdx < kernel_num; ++kernelIdx)
+  {
+     Dtype tmp_max_value = 0;
+     for(int heightIdx = 0; heightIdx < height; heightIdx++)
+         for(int widthIdx = 0; widthIdx < width; widthIdx++)
+            if(sort_weight[kernelIdx * height * width + heightIdx * width + widthIdx] > tmp_max_value)
+                tmp_max_value = sort_weight[kernelIdx * height * width + heightIdx * width + widthIdx];
+     kernel_level_sort_weight[kernelIdx] = tmp_max_value; 
+  }
+  //2. sort kernel_level_sort_weight
+  vector<Dtype> kernel_level_weight_original(kernel_level_sort_weight);
+  sort(kernel_level_sort_weight.begin(), kernel_level_sort_weight.end());
+  //3. base the sparse ratio setting to zero corresponding kernel
+  float ratio = this->sparse_ratio_;
+  int index = int(kernel_num * ratio);
+  Dtype thr;
+  Dtype* muweight = this->blobs_[0]->mutable_cpu_data();
+//  int *mask_data = this->masks_.mutable_cpu_data();
+  float rat = 0;
+  if(index > 0){
+     thr = kernel_level_sort_weight[index - 1];
+     for(int kernelIdx = 0; kernelIdx < kernel_num; kernelIdx++)
+     {
+	if(kernel_level_weight_original[kernelIdx] > thr || kernel_level_weight_original[kernelIdx] < -thr)
+	{
+	    for(int heightIdx = 0; heightIdx < height; ++heightIdx)
+	       for(int widthIdx = 0; widthIdx < width; ++widthIdx)
+               {
+		  mask_data[kernelIdx * height * width + heightIdx * width + widthIdx] = 1;		
+	       }
+	}
+        else
+        {
+	    for(int heightIdx = 0; heightIdx < height; ++heightIdx)
+	       for(int widthIdx = 0; widthIdx < width; ++widthIdx)
+               {
+		  mask_data[kernelIdx * height * width + heightIdx * width + widthIdx] = 0;		
+		  muweight[kernelIdx * height * width + heightIdx * width + widthIdx] = 0;
+                  rat += 1;		
+	       }
+	}
+     }
+  }
+  else //index = 0
+  {
+     for(int i = 0; i < count; ++i)
+     { 
+          mask_data[i] = (weight[i] == 0 ? 0 :1); //keep unchanged
+	  rat += (1-mask_data[i]) ;
+     }
+  }
+#else
 
   sort(sort_weight.begin(), sort_weight.end());
   
-  //max_weight = sort_weight[count - 1];
   float ratio = this->sparse_ratio_;
-  //cout << sort_weight[0] << " " << sort_weight[count - 1] << endl;
   int index = int(count*ratio);
   Dtype thr ;
   Dtype* muweight = this->blobs_[0]->mutable_cpu_data();
   float rat = 0;
   if(index >0) {
   thr = sort_weight[index - 1];
-  //thr = ratio;
-  LOG(INFO) << "THR: "<<thr<<endl ;
+  LOG(INFO) << "InnerProduct THR: "<< thr << endl ;
 
   for (int i = 0; i < count; ++i)
   {
     mask_data[i] =  ((weight[i] > thr || weight[i] < -thr) ? 1 : 0) ;
+
+   //data which fabs(weight[i]) < thr will be set to 0 ----Solomon
     muweight[i] *= mask_data[i];
    rat += (1-mask_data[i]) ;
   }
@@ -55,12 +116,12 @@ void CmpInnerProductLayer<Dtype>::ComputeBlobMask()
   else {
       for (int i = 0; i < count; ++i)
       {    
-         mask_data[i]  = (weight[i]== 0 ? 0 : 1);
+         mask_data[i]  = (weight[i] == 0 ? 0 : 1);
          rat += (1-mask_data[i]) ;
       } 
   }
-  LOG(INFO) << "sparsity: "<< rat/count <<endl;
-  //min_weight = sort_weight[index];
+#endif
+   LOG(INFO) << "sparsity: "<< rat/count <<endl; //rat means weight num who was set to 0 ----Solomon
     
   if(this->quantize_term_)
   {
@@ -115,24 +176,21 @@ void CmpInnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     }
   }  // parameter initialization
   this->param_propagate_down_.resize(this->blobs_.size(), true);
-  
+ 
+ //deep compression: prune + quantization data initialization ----Solomon 
   this->sparse_ratio_ = this->layer_param_.inner_product_param().sparse_ratio();
   this->class_num_ = this->layer_param_.inner_product_param().class_num();
   this->quantize_term_ = this->layer_param_.inner_product_param().quantize_term();
   int count = this->blobs_[0]->count() ; 
   vector<int> mask_shape(1,count);
   this->masks_.Reshape(mask_shape);
-  //int *mask_data = this->masks_.mutable_cpu_data();
   caffe_set(count, 1, this->masks_.mutable_cpu_data());
-
 
   if(quantize_term_)
   {   
     this->indices_.Reshape(mask_shape);
     vector<int> cen_shape(1,class_num_);
     this->centroids_.Reshape(cen_shape);
-    this->tmpDiff_.Reshape(cen_shape);
-    this->freq_.Reshape(cen_shape);
   } 
 
 }

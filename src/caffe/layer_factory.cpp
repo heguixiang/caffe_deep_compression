@@ -7,7 +7,6 @@
 
 #include "caffe/layer.hpp"
 #include "caffe/layer_factory.hpp"
-#include "caffe/layers/clip_layer.hpp"
 #include "caffe/layers/conv_layer.hpp"
 #include "caffe/layers/deconv_layer.hpp"
 #include "caffe/layers/lrn_layer.hpp"
@@ -17,7 +16,7 @@
 #include "caffe/layers/softmax_layer.hpp"
 #include "caffe/layers/tanh_layer.hpp"
 #include "caffe/proto/caffe.pb.h"
-#include "caffe/layers/cmp_conv_layer.hpp" //Solomon
+#include "caffe/layers/cmp_conv_layer.hpp" // ----Solomon
 
 #ifdef USE_CUDNN
 #include "caffe/layers/cudnn_conv_layer.hpp"
@@ -29,7 +28,7 @@
 #include "caffe/layers/cudnn_sigmoid_layer.hpp"
 #include "caffe/layers/cudnn_softmax_layer.hpp"
 #include "caffe/layers/cudnn_tanh_layer.hpp"
-#include "caffe/layers/cudnn_cmp_conv_layer.hpp"
+#include "caffe/layers/cudnn_cmp_conv_layer.hpp" // ----Solomon
 #endif
 
 #ifdef WITH_PYTHON_LAYER
@@ -79,7 +78,6 @@ shared_ptr<Layer<Dtype> > GetConvolutionLayer(
 REGISTER_LAYER_CREATOR(Convolution, GetConvolutionLayer);
 
 // Get cmp convolution layer according to engine ----Solomon
- 
 template <typename Dtype>
 shared_ptr<Layer<Dtype> > GetCmpConvolutionLayer(
     const LayerParameter& param) {
@@ -116,6 +114,8 @@ shared_ptr<Layer<Dtype> > GetCmpConvolutionLayer(
   }
 }
 REGISTER_LAYER_CREATOR(CmpConvolution, GetCmpConvolutionLayer);
+
+
 
 // Get deconvolution layer according to engine.
 template <typename Dtype>

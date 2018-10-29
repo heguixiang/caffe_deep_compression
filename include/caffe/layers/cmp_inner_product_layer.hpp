@@ -1,3 +1,11 @@
+/**                                                                                                                                                                                      
+ *
+ * InnerProduct_layer.hpp deep compression implementation header code
+ * author: Solomon He, Solomonhe@zhaoxin.com
+ *
+ **/
+
+
 #ifndef CAFFE_CMP_INNER_PRODUCT_LAYER_HPP_
 #define CAFFE_CMP_INNER_PRODUCT_LAYER_HPP_
 
@@ -48,11 +56,6 @@ class CmpInnerProductLayer : public Layer<Dtype> {
   Blob<Dtype> bias_multiplier_;
   bool transpose_;  ///< if true, assume transposed weights
   
-  ///temp variables for weight quantization
-  Blob<Dtype> tmpDiff_;
-  Blob<int> freq_;
-
-
   //sparse parameters
   float sparse_ratio_;
   int class_num_;

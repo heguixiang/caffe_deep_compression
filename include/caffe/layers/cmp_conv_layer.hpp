@@ -1,3 +1,10 @@
+/**                                                                                                                                                                                      
+ *
+ * Conv_layer.cpp deep compression implementation header code
+ * author: Solomon He, Solomonhe@zhaoxin.com
+ *
+ **/
+
 #ifndef CAFFE_CMP_CONV_LAYER_HPP_
 #define CAFFE_CMP_CONV_LAYER_HPP_
 
